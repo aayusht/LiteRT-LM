@@ -1091,7 +1091,7 @@ TEST_F(PipelineCustomSamplingTest,
     decode_tokens.push_back({1, 1});
   }
   auto delayed_executor = CreateFakeLlmExecutor(
-      /*prefill_tokens=*/{{2}, {0, 0}},
+      /*prefill_tokens=*/{{2}, {224, 90}},
       /*decode_tokens=*/{{224, 90},
                          {24, 547},
                          {8, 58},
