@@ -88,6 +88,9 @@ struct LiteRtLmSettings {
   int num_threads_to_upload = -1;
   int num_threads_to_compile = -1;
   bool convert_weights_on_gpu = false;
+  // If true, use Session instead of Conversation to run the inference.
+  // Note that session does not add necessary prompt templates.
+  bool use_session = false;
 };
 
 // Runs the LLM inference with the given settings.

@@ -169,7 +169,7 @@ class EngineImpl : public Engine {
 
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
-      const SessionConfig& session_config) const override {
+      const SessionConfig& session_config) override {
     auto config = session_config;
     RETURN_IF_ERROR(config.MaybeUpdateAndValidate(engine_settings_));
     // For the TfLite executors, we use the built-in sampling logic instead of

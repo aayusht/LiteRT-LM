@@ -141,7 +141,7 @@ class EngineImpl : public Engine {
 
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
-      const SessionConfig& session_config) const override {
+      const SessionConfig& session_config) override {
     auto config = session_config;
     RETURN_IF_ERROR(config.MaybeUpdateAndValidate(engine_settings_));
     return InitializeSessionAdvanced(execution_manager_, tokenizer_, config,

@@ -343,6 +343,8 @@ class BenchmarkInfo {
   // methods will return an error.
   absl::Status TimeInitPhaseStart(const std::string& phase_name);
   absl::Status TimeInitPhaseEnd(const std::string& phase_name);
+  absl::Status RecordSessionCreationTime(absl::Duration duration);
+  absl::Status RecordConversationCreationTime(absl::Duration duration);
   // Time the start and end of a prefill/decode turn. The num_prefill_tokens
   // should be the number of tokens processed in this turn. The method will
   // return an error if the methods are called out of order (i.e. one end after

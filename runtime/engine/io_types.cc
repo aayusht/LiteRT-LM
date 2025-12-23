@@ -231,6 +231,17 @@ absl::Status BenchmarkInfo::TimeInitPhaseEnd(const std::string& phase_name) {
   return absl::OkStatus();
 }
 
+absl::Status BenchmarkInfo::RecordSessionCreationTime(absl::Duration duration) {
+  init_phases_["Session creation"] = duration;
+  return absl::OkStatus();
+}
+
+absl::Status BenchmarkInfo::RecordConversationCreationTime(
+    absl::Duration duration) {
+  init_phases_["Conversation creation"] = duration;
+  return absl::OkStatus();
+}
+
 absl::Status BenchmarkInfo::TimeMarkDelta(const std::string& mark_name) {
   if (mark_time_map_.contains(mark_name)) {
     mark_durations_[mark_name] = absl::Now() - mark_time_map_[mark_name];
@@ -376,7 +387,20 @@ std::ostream& operator<<(std::ostream& os, const BenchmarkInfo& info) {
     os << "    No init phases recorded." << std::endl;
   } else {
     double total_time = 0.0;
-    for (const auto& phase : info.GetInitPhases()) {
+    const auto& init_phases = info.GetInitPhases();
+    bool has_conversation_creation = false;
+    for (const auto& [phase_name, phase_duration] : init_phases) {
+      if (phase_name == "Conversation creation") {
+        has_conversation_creation = true;
+        break;
+      }
+    }
+    for (const auto& phase : init_phases) {
+      if (has_conversation_creation && phase.first == "Session creation") {
+        // Session creation time is included in conversation creation time,
+        // so skip it.
+        continue;
+      }
       total_time += absl::ToDoubleMilliseconds(phase.second);
       os << "    - " << phase.first << ": "
          << absl::ToDoubleMilliseconds(phase.second) << " ms" << std::endl;

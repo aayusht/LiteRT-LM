@@ -436,6 +436,27 @@ absl::Status RunMultiTurnConversation(const LiteRtLmSettings& settings,
   return absl::OkStatus();
 }
 
+absl::Status RunSingleTurnSession(const std::string& input_prompt,
+                                  const LiteRtLmSettings& settings,
+                                  Engine* engine, Engine::Session* session) {
+  std::stringstream captured_output;
+  if (settings.async) {
+    return absl::UnimplementedError(
+        "Async mode is not supported for single turn session.");
+  } else {
+    std::vector<InputData> inputs;
+    inputs.emplace_back(InputText(input_prompt));
+    RETURN_IF_ERROR(session->RunPrefill(inputs));
+    ASSIGN_OR_RETURN(auto responses, session->RunDecode());
+    for (const auto& response : responses.GetTexts()) {
+      captured_output << response << std::endl << std::flush;
+    }
+  }
+  std::cout << captured_output.str() << std::endl << std::flush;
+  CheckExpectedOutput(captured_output.str(), settings);
+  return absl::OkStatus();
+}
+
 absl::StatusOr<std::vector<litert::lm::ScorerOutput>> RunScoreText(
     litert::lm::Engine* llm, litert::lm::Engine::Session* session,
     absl::string_view input_prompt,

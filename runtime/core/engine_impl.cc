@@ -28,6 +28,7 @@
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
+#include "absl/time/clock.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "litert/cc/litert_environment.h"  // from @litert
 #include "litert/cc/litert_macros.h"  // from @litert
@@ -136,7 +137,8 @@ class EngineImpl : public Engine {
         worker_thread_pool_(std::move(worker_thread_pool)) {}
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
-      const SessionConfig& session_config) const override {
+      const SessionConfig& session_config) override {
+    absl::Time start_time = absl::Now();
     SessionConfig config = session_config;
     // TODO(b/418794726): Move this logics to be part of the SessionConfig
     // class.
@@ -144,11 +146,21 @@ class EngineImpl : public Engine {
 
     ABSL_CHECK(litert_model_resources_ != nullptr);
     ASSIGN_OR_RETURN(auto* tokenizer, litert_model_resources_->GetTokenizer());
-    return InitializeSessionBasic(executor_.get(), tokenizer,
-                                  /*vision_executor=*/vision_executor_.get(),
-                                  /*audio_executor=*/audio_executor_.get(),
-                                  config, benchmark_info_,
-                                  worker_thread_pool_.get());
+    ASSIGN_OR_RETURN(
+        auto session,
+        InitializeSessionBasic(executor_.get(), tokenizer,
+                               /*vision_executor=*/vision_executor_.get(),
+                               /*audio_executor=*/audio_executor_.get(), config,
+                               benchmark_info_, worker_thread_pool_.get()));
+    if (benchmark_info_.has_value()) {
+      auto session_benchmark_info_or = session->GetMutableBenchmarkInfo();
+      if (session_benchmark_info_or.ok()) {
+        RETURN_IF_ERROR(
+            session_benchmark_info_or.value()->RecordSessionCreationTime(
+                absl::Now() - start_time));
+      }
+    }
+    return session;
   }
   absl::Status WaitUntilDone(absl::Duration timeout) override {
     return worker_thread_pool_->WaitUntilDone(timeout);
@@ -183,18 +195,24 @@ class EngineImpl : public Engine {
 // Method to create Engine.
 absl::StatusOr<std::unique_ptr<Engine>> Engine::CreateEngine(
     EngineSettings engine_settings, absl::string_view input_prompt_as_hint) {
-  std::optional<BenchmarkInfo> benchmark_info;
-  if (engine_settings.IsBenchmarkEnabled()) {
-    benchmark_info = std::make_optional<BenchmarkInfo>(
-        engine_settings.GetBenchmarkParams().value());
+  std::optional<BenchmarkInfo> benchmark_info =
+      engine_settings.IsBenchmarkEnabled()
+          ? std::make_optional<BenchmarkInfo>(
+                engine_settings.GetBenchmarkParams().value())
+          : std::nullopt;
+
+  if (benchmark_info.has_value()) {
     RETURN_IF_ERROR(
-        benchmark_info->TimeInitPhaseStart("Executor initialization"));
+        benchmark_info->TimeInitPhaseStart("Model assets initialization"));
   }
   const auto& model_assets =
       engine_settings.GetMutableMainExecutorSettings().GetModelAssets();
-
   ASSIGN_OR_RETURN(auto model_resources,
                    BuildLiteRtCompiledModelResources(model_assets));
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(
+        benchmark_info->TimeInitPhaseEnd("Model assets initialization"));
+  }
 
   if (benchmark_info.has_value()) {
     RETURN_IF_ERROR(
@@ -206,8 +224,11 @@ absl::StatusOr<std::unique_ptr<Engine>> Engine::CreateEngine(
         benchmark_info->TimeInitPhaseEnd("Tokenizer initialization"));
   }
 
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(
+        benchmark_info->TimeInitPhaseStart("LlmMetadata initialization"));
+  }
   ASSIGN_OR_RETURN(auto* llm_metadata, model_resources->GetLlmMetadata());
-
   // Update and load the parameters from the model file and convert the
   // tokens to ids.
   RETURN_IF_ERROR(engine_settings.MaybeUpdateAndValidate(
@@ -218,7 +239,15 @@ absl::StatusOr<std::unique_ptr<Engine>> Engine::CreateEngine(
           ModelType::kTfLiteVisionEncoder),
       model_resources->GetTFLiteModelBackendConstraint(
           ModelType::kTfLiteAudioEncoderHw)));
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(
+        benchmark_info->TimeInitPhaseEnd("LlmMetadata initialization"));
+  }
 
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(
+        benchmark_info->TimeInitPhaseStart("Executor initialization"));
+  }
   std::unique_ptr<LlmExecutor> executor;
   ASSIGN_OR_RETURN(auto& env,
                    GetEnvironment(engine_settings, *model_resources));
