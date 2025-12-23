@@ -232,6 +232,10 @@ absl::StatusOr<BenchmarkInfo> SessionAdvanced::GetBenchmarkInfo() {
       "in the EngineSettings.");
 }
 
+absl::StatusOr<BenchmarkInfo*> SessionAdvanced::GetMutableBenchmarkInfo() {
+  return absl::UnimplementedError("Not implemented for SessionAdvanced.");
+}
+
 absl::StatusOr<std::unique_ptr<Engine::Session>> SessionAdvanced::Clone(
     absl::AnyInvocable<void(absl::StatusOr<Responses>)> callback) {
   auto execution_manager_lock = execution_manager_.lock();

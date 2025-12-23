@@ -688,6 +688,24 @@ TEST(BenchmarkInfoTests, AddInitPhaseTwice) {
               StatusIs(absl::StatusCode::kInternal));
 }
 
+TEST(BenchmarkInfoTests, RecordSessionCreationTime) {
+  BenchmarkInfo benchmark_info(GetBenchmarkParams());
+  const absl::Duration kDuration = absl::Milliseconds(123);
+  EXPECT_OK(benchmark_info.RecordSessionCreationTime(kDuration));
+  const auto& phases = benchmark_info.GetInitPhases();
+  ASSERT_EQ(phases.size(), 1);
+  EXPECT_EQ(phases.at("Session creation"), kDuration);
+}
+
+TEST(BenchmarkInfoTests, RecordConversationCreationTime) {
+  BenchmarkInfo benchmark_info(GetBenchmarkParams());
+  const absl::Duration kDuration = absl::Milliseconds(456);
+  EXPECT_OK(benchmark_info.RecordConversationCreationTime(kDuration));
+  const auto& phases = benchmark_info.GetInitPhases();
+  ASSERT_EQ(phases.size(), 1);
+  EXPECT_EQ(phases.at("Conversation creation"), kDuration);
+}
+
 TEST(BenchmarkInfoTests, AddPrefillTurn) {
   BenchmarkInfo benchmark_info(GetBenchmarkParams());
   EXPECT_OK(benchmark_info.TimePrefillTurnStart());
