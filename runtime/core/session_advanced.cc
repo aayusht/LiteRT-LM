@@ -223,6 +223,28 @@ absl::StatusOr<Responses> SessionAdvanced::RunTextScoring(
   return absl::UnimplementedError("RunTextScoring is not implemented.");
 }
 
+absl::StatusOr<Responses> SessionAdvanced::GenerateContent(
+    const std::vector<InputData>& contents) {
+  RETURN_IF_ERROR(RunPrefill(contents));
+  return RunDecode();
+}
+
+absl::Status SessionAdvanced::GenerateContentStream(
+    const std::vector<InputData>& contents,
+    absl::AnyInvocable<void(absl::StatusOr<Responses>)> callback) {
+  return GenerateContentStream(contents, std::move(callback),
+                               DecodeConfig::CreateDefault());
+}
+
+absl::Status SessionAdvanced::GenerateContentStream(
+    const std::vector<InputData>& contents,
+    absl::AnyInvocable<void(absl::StatusOr<Responses>)> callback,
+    const DecodeConfig& decode_config) {
+  absl::StatusOr<Responses> response = GenerateContent(contents);
+  callback(response);
+  return absl::OkStatus();
+}
+
 absl::StatusOr<BenchmarkInfo> SessionAdvanced::GetBenchmarkInfo() {
   if (session_info_->benchmark_info.has_value()) {
     return session_info_->benchmark_info.value();

@@ -27,12 +27,12 @@ licenses(["notice"])
 
 config_setting(
     name = "use_legacy_engine",
-    values = {"copt": "-DUSE_LEGACY_ENGINE"},
+    define_values = {"litert_engine": "legacy"},
 )
 
 config_setting(
     name = "use_advanced_legacy_engine",
-    values = {"copt": "-DUSE_ADVANCED_LEGACY_ENGINE"},
+    define_values = {"litert_engine": "advanced_legacy"},
 )
 
 cc_library(
@@ -146,20 +146,6 @@ cc_library(
     ),
 )
 
-cc_test(
-    name = "litert_lm_lib_test",
-    srcs = ["litert_lm_lib_test.cc"],
-    data = [
-        "//runtime/testdata",
-    ],
-    deps = [
-        ":litert_lm_lib",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_absl//absl/status",
-        "//runtime/util:test_utils",
-    ],
-)
-
 cc_library(
     name = "shared_flags",
     srcs = ["shared_flags.cc"],
@@ -264,6 +250,28 @@ cc_binary(
         ],
         "//conditions:default": [
         ],
+    }),
+)
+
+cc_binary(
+    name = "lora_comparison_main",
+    srcs = ["lora_comparison_main.cc"],
+    deps = [
+        ":engine_interface",
+        ":engine_settings",
+        ":io_types",
+        "//base",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:string_view",
+        "//runtime/executor:executor_settings_base",
+        "//runtime/executor:llm_executor_settings",
+        "//runtime/util:litert_status_util",
+        "//runtime/util:scoped_file",
+    ] + select({
+        "//conditions:default": ["//runtime/core:engine_impl"],
     }),
 )
 
