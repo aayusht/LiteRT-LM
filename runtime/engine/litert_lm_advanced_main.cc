@@ -192,6 +192,7 @@ absl::Status MainHelper(int argc, char** argv) {
       absl::GetFlag(FLAGS_optimize_shader_compilation);
   settings.share_constant_tensors =
       absl::GetFlag(FLAGS_share_constant_tensors);
+  settings.num_iterations = absl::GetFlag(FLAGS_num_iterations);
 
   // Adjust max_num_tokens and prefill_batch_size if not set on benchmark mode.
   if (settings.benchmark && settings.benchmark_prefill_tokens > 0) {

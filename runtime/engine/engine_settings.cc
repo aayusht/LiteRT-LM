@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/base/nullability.h"  // from @com_google_absl
+#include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/match.h"  // from @com_google_absl
@@ -256,7 +257,7 @@ absl::Status EngineSettings::MaybeUpdateAndValidate(
         audio_executor_settings_.value(), audio_backend_constraint, "Audio"));
   }
 
-  ABSL_LOG(INFO) << "The llm metadata: " << metadata.DebugString();
+  ABSL_VLOG(5) << "The llm metadata: " << metadata.DebugString();
   ABSL_LOG(INFO) << "The validated engine settings: " << *this;
   return absl::OkStatus();
 }
@@ -371,11 +372,10 @@ SessionConfig SessionConfig::CreateDefault() {
 
 absl::Status SessionConfig::MaybeUpdateAndValidate(
     const EngineSettings& engine_settings) {
-  ABSL_LOG(INFO)
-      << "The GetLlmMetadata: "
-      << (engine_settings.GetLlmMetadata().has_value()
-              ? engine_settings.GetLlmMetadata().value().DebugString()
-              : "Not set");
+  ABSL_VLOG(5) << "The GetLlmMetadata: "
+               << (engine_settings.GetLlmMetadata().has_value()
+                       ? engine_settings.GetLlmMetadata().value().DebugString()
+                       : "Not set");
   if ((stop_token_ids_.empty()) &&
       !engine_settings.GetLlmMetadata().has_value()) {
     return absl::InvalidArgumentError(
@@ -461,7 +461,7 @@ absl::Status SessionConfig::MaybeUpdateAndValidate(
     }
   }
 
-  ABSL_LOG(INFO) << "The validated session config: " << *this;
+  ABSL_VLOG(5) << "The validated session config: " << *this;
   return absl::OkStatus();
 }
 
